@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sample-aws-sam-lambda
+
+  Sample SAM Template for sample-aws-sam-lambda
+  
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+
+Parameters:
+  SecurityGroupIds:
+    Type: CommaDelimitedList
+    Default: sg-039849182dda73db1
+  SubnetIDs:
+    Type: CommaDelimitedList
+    Description: The list of SubnetIDs in your Virtual Private Cloud (VPC)
+    Default: subnet-046e7398e76c7aa86,subnet-01cd2e3b9aa34621d
+  EFSpath:
+    Type: String
+    Default: /mnt/efs
+  AccessPointARN:
+    Type: String
+    Description: Access point ARN
+    Default: arn:aws:elasticfilesystem:ap-northeast-1:149405200317:access-point/fsap-08a2174b39a410c7d
+  DynamoDBTableName:
+    Type: String
+    Default: CfnImportSampleTable
+
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Events:
+        HelloWorld:
+          Type: Api
+          Properties:
+            Path: /hello
+            Method: get
+        PutTask:
+          Type: Api
+          Properties: 
+            Path: /hello
+            Method: put
+      # VpcConfig:
+      #   SecurityGroupIds: !Ref SecurityGroupIds
+      #   SubnetIds: !Ref SubnetIDs
+      # FileSystemConfigs:
+      # - Arn: !Ref AccessPointARN
+      #   LocalMountPath: !Ref EFSpath
+      Environment:
+          Variables:
+            DYNAMO_DB_TABLE_NAME: !Ref DynamoDBTableName
+      Policies:
+      - Statement:
+        - Sid: AWSLambdaVPCAccessExecutionRole
+          Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - ec2:CreateNetworkInterface
+            - ec2:DescribeNetworkInterfaces
+            - ec2:DeleteNetworkInterface
+          Resource: "*"
+        - Sid: AmazonElasticFileSystemClientFullAccess
+          Effect: Allow
+          Action:
+            - elasticfilesystem:ClientMount
+            - elasticfilesystem:ClientRootAccess
+            - elasticfilesystem:ClientWrite
+            - elasticfilesystem:DescribeMountTargets
+          Resource: "*"
+      - AmazonDynamoDBFullAccess
+    Metadata:
+      DockerTag: nodejs14.x-v1
+      DockerContext: ./hello-world
+      Dockerfile: Dockerfile
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  HelloWorldApi:
+    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  HelloWorldFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt HelloWorldFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt HelloWorldFunctionRole.Arn

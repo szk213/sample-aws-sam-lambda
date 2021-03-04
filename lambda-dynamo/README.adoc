@@ -1,0 +1,37 @@
+= lambda-dynamo
+
+lambda-dynamo連携
+
+== 条件
+
+* lambda-efsを実行済みであること
+
+== 作成
+
+. ネットワーク構築
+** `aws cloudformation create-stack --stack-name sample-lambda-netowrk --template-body file://environment/create-network-cfn.yml`
+. ステートフルサービスの構築
+** `aws cloudformation create-stack --stack-name sample-lambda-statefull --template-body file://environment/create-statefull-service-cfn.yml`
+. パラメータの入力
+** ステートフルサービスの構築で作成したパラメータをtemplate.yamlに設定
+. Lambdaの構築
+.. `sam build`
+.. `sam deploy`
+
+== 確認
+
+** 登録: `curl -XPUT https://xxxx.execute-api.ap-northeast-1.amazonaws.com/Prod/hello/ -d '{"userId": "sample" }'`
+** 取得: `curl https://xxxx.execute-api.ap-northeast-1.amazonaws.com/Prod/hello/`
+
+== 削除
+
+. `aws cloudformation delete-stack --stack-name sam-app`
+. `aws cloudformation delete-stack --stack-name sample-lambda-statefull`
+. `aws cloudformation delete-stack --stack-name sample-lambda-network`
+
+== 参考
+
+* https://github.com/aws-samples/aws-lambda-efs-samples[aws-samples/aws-lambda-efs-samples]
+* https://qiita.com/hayao_k/items/be0b9f984dd9ebf31696[AWS SAM CLI で Lambda Container Support をお試し]
+* https://qiita.com/umeneri/items/6fb3f7560f4a878f6dfd[aws-sam-cliでLambda,DynamoDBのサーバーレスアプリケーション開発に入門してみる]
+* https://qiita.com/is_ryo/items/74f3fc70b7602888a2ac[LambdaでDynamoDBのデータを操作する(Node&Python)]

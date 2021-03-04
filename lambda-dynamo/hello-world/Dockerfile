@@ -1,6 +1,6 @@
 FROM public.ecr.aws/lambda/nodejs:14
 
-COPY app.js package.json ./
+COPY app.js dynamodb-client.js package.json ./
 
 RUN npm install
 

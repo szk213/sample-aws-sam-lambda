@@ -1,5 +1,11 @@
 = sample-aws-sam-lambda
 
+== 環境作成
+
+1. ネットワーク構築
+** `aws cloudformation create-stack --stack-name sample-lambda-netowrk --template-body file://environment/create-network-cfn.yml`
+2. ステートフル
+
 == 手順
 
 . イメージのビルド
@@ -22,4 +28,7 @@
 
 == 参考
 
+* https://github.com/aws-samples/aws-lambda-efs-samples[aws-samples/aws-lambda-efs-samples]
 * https://qiita.com/hayao_k/items/be0b9f984dd9ebf31696[AWS SAM CLI で Lambda Container Support をお試し]
+* https://qiita.com/umeneri/items/6fb3f7560f4a878f6dfd[aws-sam-cliでLambda,DynamoDBのサーバーレスアプリケーション開発に入門してみる]
+* https://qiita.com/is_ryo/items/74f3fc70b7602888a2ac[LambdaでDynamoDBのデータを操作する(Node&Python)]
