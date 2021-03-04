@@ -1,0 +1,27 @@
+= lambda
+
+labmda(container)
+
+== 手順
+
+. イメージのビルド
+** `sam build`
+. ビルドしたイメージの確認
+.. `docker run -d -p 9000:8080 helloworldfunction:nodejs14.x-v1`
+.. `curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{}'`
+. 確認したコンテナを削除
+** `docker stop dc8a759caaa2 && docker rm dc8a759caaa2`
+. samを使用してビルドしたイメージを確認
+** `sam local invoke`
+. ecrのリポジトリ作成
+** `aws ecr create-repository --repository-name lambda-container-test`
+. デプロイ
+** `sam deploy --guided`
+. 確認
+** `curl https://x5wjq4dmg8.execute-api.ap-northeast-1.amazonaws.com/Prod/hello/`
+. 削除
+** `aws cloudformation delete-stack --stack-name sam-app`
+
+== 参考
+
+* https://qiita.com/hayao_k/items/be0b9f984dd9ebf31696[AWS SAM CLI で Lambda Container Support をお試し]

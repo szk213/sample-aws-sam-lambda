@@ -32,6 +32,5 @@ lambda-dynamo連携
 == 参考
 
 * https://github.com/aws-samples/aws-lambda-efs-samples[aws-samples/aws-lambda-efs-samples]
-* https://qiita.com/hayao_k/items/be0b9f984dd9ebf31696[AWS SAM CLI で Lambda Container Support をお試し]
 * https://qiita.com/umeneri/items/6fb3f7560f4a878f6dfd[aws-sam-cliでLambda,DynamoDBのサーバーレスアプリケーション開発に入門してみる]
 * https://qiita.com/is_ryo/items/74f3fc70b7602888a2ac[LambdaでDynamoDBのデータを操作する(Node&Python)]
