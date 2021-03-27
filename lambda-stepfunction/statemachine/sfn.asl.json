@@ -1,0 +1,10 @@
+{
+  "StartAt": "hello world",
+  "States": {
+    "hello world": {
+      "Type": "Task",
+      "Resource": "${LambdaFunction}",
+      "End": true
+    }
+  }
+}

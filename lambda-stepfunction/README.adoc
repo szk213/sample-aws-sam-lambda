@@ -1,0 +1,33 @@
+= lambda-dynamo
+
+lambda-dynamo連携
+
+== 条件
+
+* lambda-efsを実行済みであること
+
+== 作成
+
+. ログ用ロールの作成
+** `aws cloudformation create-stack --stack-name apigateway-logging-role --template-body file://environment/apigateway-logging-role-cfn.yml`
+. Lambdaの構築
+.. `sam build`
+.. `sam deploy --guided`
+
+== 確認
+
+** 開始: `curl -XPOST https://xxxx.execute-api.ap-northeast-1.amazonaws.com/dev/`
+** 確認: `curl https://xxxx.execute-api.ap-northeast-1.amazonaws.com/dev/${executionId}`
+
+== 削除
+
+* `aws cloudformation delete-stack --stack-name sam-app`
+
+== 参考
+
+* https://github.com/jvillane/aws-sam-step-functions-lambda[jvillane/aws-sam-step-functions-lambda]
+* https://github.com/ChaseSan/async-api-sample[ChaseSan/async-api-sample]
+* https://dev.classmethod.jp/articles/aws-sam-step-functions/[Step Functionsの構築はAWS SAMを利用すると捗りそうです]
+* https://dev.classmethod.jp/articles/serverless-swagger-apigateway/[【初心者向け】SwaggerとAWS SAMを使ってWebAPIを簡単に作ってみた]
+* https://qiita.com/meno-m/items/a7423e3b84bb5d887fd6[SAM ＋ SwaggerでAPIGateway + Lambdaを構築]
+ 
