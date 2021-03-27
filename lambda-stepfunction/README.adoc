@@ -1,10 +1,6 @@
-= lambda-dynamo
+= lambda-stepfunction
 
-lambda-dynamo連携
-
-== 条件
-
-* lambda-efsを実行済みであること
+lambda-stepfunction連携
 
 == 作成
 
