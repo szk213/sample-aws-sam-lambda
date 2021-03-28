@@ -1,0 +1,99 @@
+= apigateway-stepfunction-lambda-dynamo
+
+apigateway-stepfunction-lambda-dynamo連携
+
+== 構成
+
+[plantuml]
+----
+@startuml
+left to right direction
+
+!define AWSPuml https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/master/dist
+!includeurl AWSPuml/AWSCommon.puml
+!includeurl AWSPuml/GroupIcons/Cloud.puml
+!includeurl AWSPuml/General/Client.puml
+!includeurl AWSPuml/Compute/EC2.puml
+!includeurl AWSPuml/Storage/EFSFilesystem.puml
+!includeurl AWSPuml/Storage/ElasticFileSystemEFS.puml
+!includeurl AWSPuml/MigrationAndTransfer/DataSync.puml
+!includeurl AWSPuml/MigrationAndTransfer/DataSyncAgent.puml
+!includeurl AWSPuml/GroupIcons/Region.puml
+!includeurl AWSPuml/General/Client.puml
+
+
+!includeurl AWSPuml/GroupIcons/Cloud.puml
+!includeurl AWSPuml/General/OfficeBuilding.puml
+!includeurl AWSPuml/Mobile/APIGateway.puml
+!includeurl AWSPuml/ApplicationIntegration/StepFunctions.puml
+!includeurl AWSPuml/Compute/Lambda.puml
+!includeurl AWSPuml/Compute/LambdaLambdaFunction.puml
+!includeurl AWSPuml/Database/DynamoDB.puml
+!includeurl AWSPuml/Storage/EFSFilesystem.puml
+
+
+Client(client,"Client","Client") {
+}
+
+Cloud(aws,AWS,"AWS"){
+  APIGateway(apiGateway,"APIGateway","APIGateway") {
+  }
+  StepFunctions(stepFunction,"StepFunction","StepFunction") {
+  }
+  Lambda(lambda,"Lambda","Lambda") {
+  }
+  DynamoDB(dynamo,"DynamoDB","DynamoDB") {
+  }
+}
+
+client 0---> apiGateway
+apiGateway 0---> stepFunction
+stepFunction 0---> lambda
+lambda 0---> dynamo
+@enduml
+----
+
+== 準備
+
+=== ECRにリポジトリを作成
+
+ECRにリポジトリを作成する
+
+** `aws ecr create-repository --repository-name lambda-container-test`
+
+NOTE: リポジトリ名は`sam deploy --gided` 実行時の**Image Repository for HelloWorldFunction**に入力する
+
+=== apigateway用のロール作成
+
+ログ用ロールの作成(既に作成済みの場合は不要)
+
+** `aws cloudformation create-stack --stack-name apigateway-logging-role --template-body file://environment/apigateway-logging-role-cfn.yml`
+
+== 作成
+
+. Lambdaの構築
+.. `sam build`
+.. `sam deploy --guided`
+
+== 確認
+
+** 登録開始: curl -XPOST https://${xxxx}.execute-api.ap-northeast-1.amazonaws.com/dev/ -H 'content-type: application/json' -d '{"userId":"sample"}'`
+** 処理確認: `curl https://${xxxx}.execute-api.ap-northeast-1.amazonaws.com/dev/${executionId}`
+** Dynamoに**sample**が登録されていることを確認
+
+== 削除
+
+* `aws cloudformation delete-stack --stack-name sam-app`
+
+== TODO
+
+* 登録データ確認のAPI
+
+== 参考
+
+* https://github.com/jvillane/aws-sam-step-functions-lambda[jvillane/aws-sam-step-functions-lambda]
+* https://github.com/ChaseSan/async-api-sample[ChaseSan/async-api-sample]
+* https://dev.classmethod.jp/articles/aws-sam-step-functions/[Step Functionsの構築はAWS SAMを利用すると捗りそうです]
+* https://dev.classmethod.jp/articles/serverless-swagger-apigateway/[【初心者向け】SwaggerとAWS SAMを使ってWebAPIを簡単に作ってみた]
+* https://qiita.com/meno-m/items/a7423e3b84bb5d887fd6[SAM ＋ SwaggerでAPIGateway + Lambdaを構築]
+ 

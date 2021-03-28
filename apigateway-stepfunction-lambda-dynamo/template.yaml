@@ -1,0 +1,251 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sample-aws-sam-lambda-stepfunction
+
+  Sample SAM Template for sample-aws-sam-lambda
+  
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+
+Parameters:
+  StateMachineName:
+    Description: Please type the Step Functions StateMachine Name.
+    Type: String
+    Default: 'sfn-sam-app-statemachine'
+
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  DynamoResource:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: CfnImportSampleTable
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Policies:
+      - Statement:
+        - Sid: AWSLambdaVPCAccessExecutionRole
+          Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - ec2:CreateNetworkInterface
+            - ec2:DescribeNetworkInterfaces
+            - ec2:DeleteNetworkInterface
+          Resource: "*"
+      - AmazonDynamoDBFullAccess
+      Environment:
+          Variables:
+            DYNAMO_DB_TABLE_NAME: !Ref DynamoResource
+
+    Metadata:
+      DockerTag: nodejs14.x-v1
+      DockerContext: ./hello-world
+      Dockerfile: Dockerfile
+
+  StateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub ${StateMachineName}
+      DefinitionUri: statemachine/sfn.asl.json
+      DefinitionSubstitutions:
+        LambdaFunction: !GetAtt HelloWorldFunction.Arn
+      Role: !GetAtt StateMachineRole.Arn
+      Logging:
+        Level: ALL
+        IncludeExecutionData: True
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt StateMachineLogGroup.Arn
+
+  StateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName : !Join [ "", [ '/aws/states/', !Sub '${StateMachineName}', '-Logs' ] ]
+
+  StateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+
+  HelloWorldApi:
+    Type: AWS::Serverless::Api
+    DependsOn: StateMachine
+    Properties:
+      Name: HelloWorldApi
+      StageName: dev
+      MethodSettings:
+        - DataTraceEnabled: true
+          LoggingLevel: 'ERROR'
+          ResourcePath: '/*'
+          HttpMethod: '*'
+      DefinitionBody:
+        openapi: 3.0.1
+        info:
+          title: StateMachine api
+          description: Sample stateMachine api
+          version: 1.0.0
+        x-amazon-apigateway-request-validators:
+          params:
+            validateRequestParameters: true
+            validateRequestBody: false
+        x-amazon-apigateway-request-validator: params
+        paths:
+          /:
+            post:
+              x-amazon-apigateway-integration:
+                credentials:
+                  Fn::GetAtt: [ ApiGatewayRole, Arn ]
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:states:action/StartExecution
+                httpMethod: POST
+                type: aws
+                responses:
+                  default:
+                    statusCode: 200
+                    responseTemplates:
+                      application/json: |
+                        { "executionId": "$input.json('executionArn').split(':').get(7) }
+                requestTemplates:
+                  application/json:
+                    Fn::Sub: |-
+                      {
+                        "input": "$util.escapeJavaScript($input.json('$'))",
+                        "name": "$context.requestId",
+                        "stateMachineArn": "${StateMachine}"
+                      }
+              summary: Start workflow instance
+              responses:
+                '200':
+                  $ref: '#/components/responses/200Execution'
+                '403':
+                  $ref: '#/components/responses/Error'
+          /{executionId}:
+            get:
+              x-amazon-apigateway-integration:
+                credentials:
+                  Fn::GetAtt: [ ApiGatewayRole, Arn ]
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:states:action/DescribeExecution
+                httpMethod: POST
+                type: aws
+                responses:
+                  default:
+                    statusCode: 200
+                    responseTemplates:
+                      application/json: |-
+                        #set ($status = $input.json('status'))
+                        {
+                        #if($status == '"SUCCEEDED"')
+                          "output": $util.parseJson($input.json('output')),
+                        #end
+                          "status": $status
+                        }
+                requestTemplates:
+                  application/json:
+                    Fn::Sub: |-
+                      {
+                        "executionArn": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:execution:${StateMachine.Name}:$input.params().path.get('executionId')"
+                      }
+              summary: StateMachine execution status
+              responses:
+                '200':
+                  $ref: '#/components/responses/200ExecutionDetails'
+        components:
+          schemas:
+            ExecutionCreated:
+              title: Created execution
+              type: object
+              properties:
+                executionId:
+                  type: string
+              required:
+                - executionId
+            ExecutionDetails:
+              title: Execution Details
+              type: object
+              properties:
+                output:
+                  type: object
+                status:
+                  type: string
+              required:
+                - status
+            Error:
+              title: Error
+              type: object
+              properties:
+                code:
+                  type: string
+                message:
+                  type: string
+              required:
+                - code
+                - message
+          responses:
+            200Execution:
+              description: Result response
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ExecutionCreated'
+            200ExecutionDetails:
+              description: Execution Details
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/ExecutionDetails'
+            Error:
+              description: Error response
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/Error'
+  ApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /service-role/
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess
+
+Outputs:
+  HelloWorldFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt HelloWorldFunction.Arn
+  ApiUrl:
+    Description: API URL
+    Value: !Sub https://${HelloWorldApi}.execute-api.${AWS::Region}.amazonaws.com/
